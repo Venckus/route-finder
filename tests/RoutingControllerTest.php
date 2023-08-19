@@ -2,37 +2,38 @@
 
 namespace App\Tests;
 
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 
-class RoutingControllerTest extends WebTestCase
+class RoutingControllerTest extends ApiTestCase
 {
+    public function testRouteExist(): void
+    {
+        $response = static::createClient()->request('GET', "/routing/ita/deu");
+
+        $this->assertResponseIsSuccessful();
+        $this->assertContains([], $response->toArray());
+    }
+
     /**
      * @dataProvider routingUrlArgumentsProvider
      */
     public function testRoutingEndpointValidation(mixed $origin, mixed $destination, int $responseStatusCode): void
     {
-        /** @var KernelBrowser $client */
-        $client = static::createClient();
-        $crawler = $client->request('GET', "/routing/{$origin}/{$destination}");
+        static::createClient()->request('GET', "/routing/{$origin}/{$destination}");
 
         $this->assertResponseStatusCodeSame($responseStatusCode, 'bilekas');
     }
 
+    /**
+     * @return string[][]|int[][]
+     */
     public function routingUrlArgumentsProvider(): array
     {
         return [
-            'wrong origin' => ['wrong', 'pln', 422],
-            'wrong destination' => ['pln', 'wrong', 422],
-            'wrong origin and destination' => ['origin', 'destination', 422],
+            'wrong origin' => ['it', 'ita', 422],
+            'wrong destination' => ['ita', 'it', 422],
+            'wrong origin and destination' => ['it', 'de', 422],
+            'correct request' => ['ita', 'deu', 200],
         ];
-    }
-
-    public function testRoute(): void
-    {
-        $client = static::createClient();
-        $client->request('GET', '/routing/');
-
-        $this->assertResponseIsSuccessful();
     }
 }
