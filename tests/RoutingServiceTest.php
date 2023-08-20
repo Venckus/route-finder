@@ -3,9 +3,9 @@
 namespace App\Tests;
 
 use App\Services\RoutingService;
-use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-class RoutingServiceTest extends TestCase
+class RoutingServiceTest extends KernelTestCase
 {
     /**
      * @dataProvider requestAndResultProvider
@@ -14,9 +14,12 @@ class RoutingServiceTest extends TestCase
     public function testFindRouteRecursive(
         string $origin,
         string $destination,
-        array $expectedRoute
+        ?array $expectedRoute
     ): void {
-        $service = new RoutingService($origin, $destination);
+        self::bootKernel();
+        $container = static::getContainer();
+        $service   = $container->get(RoutingService::class);
+        $service->setOrigin($origin)->setDestination($destination);
 
         $service->countries = [
             'ITA' => ['borders' => ['AUT', 'FRA']],
@@ -43,6 +46,7 @@ class RoutingServiceTest extends TestCase
             'ITA -> DEU' => ['origin' => 'ITA', 'destination' => 'DEU', 'route' => ['ITA', 'AUT', 'DEU']],
             'FRA -> CZE' => ['origin' => 'FRA', 'destination' => 'CZE', 'route' => ['FRA', 'DEU', 'AUT', 'CZE']],
             'ITA -> POL' => ['origin' => 'ITA', 'destination' => 'POL', 'route' => ['ITA', 'AUT', 'CZE', 'POL']],
+            'ITA -> GBR' => ['origin' => 'ITA', 'destination' => 'GBR', 'route' => null],
         ];
     }
 
@@ -52,13 +56,15 @@ class RoutingServiceTest extends TestCase
      */
     public function testIsCountriesAccessibleValidation(array $countries): void
     {
-        $service = new RoutingService('ITA', 'DEU');
+        self::bootKernel();
+        $container = static::getContainer();
+        $service   = $container->get(RoutingService::class);
 
         $service->countries = $countries;
 
         $this->expectException(\InvalidArgumentException::class);
 
-        $service->findRoute();
+        $service->findRoute('ITA', 'DEU');
     }
 
     /**

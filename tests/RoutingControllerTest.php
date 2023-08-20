@@ -8,10 +8,9 @@ class RoutingControllerTest extends ApiTestCase
 {
     public function testRouteExist(): void
     {
-        $response = static::createClient()->request('GET', "/routing/ita/deu");
+        static::createClient()->request('GET', '/routing/ita/gbr');
 
-        $this->assertResponseIsSuccessful();
-        $this->assertContains([], $response->toArray());
+        $this->assertResponseStatusCodeSame(400);
     }
 
     /**
@@ -21,7 +20,7 @@ class RoutingControllerTest extends ApiTestCase
     {
         static::createClient()->request('GET', "/routing/{$origin}/{$destination}");
 
-        $this->assertResponseStatusCodeSame($responseStatusCode, 'bilekas');
+        $this->assertResponseStatusCodeSame($responseStatusCode);
     }
 
     /**

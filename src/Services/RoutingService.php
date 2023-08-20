@@ -3,9 +3,18 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Strategies\JsonFileReaderStrategy;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+
 class RoutingService
 {
     private const KEY_BORDERS = 'borders';
+    private const DATA_DIR    = 'data';
+    private const DATA_FILE_TYPE = 'json';
+
+    private string $origin;
+    private string $destination;
+    private string $countriesDataFilePath;
 
     /**
      * @var string[][][]|bool[][][]
@@ -13,19 +22,50 @@ class RoutingService
     public array $countries;
 
     public function __construct(
-        private string $origin,
-        private string $destination
+        #[Autowire(env: 'COUNTRIES_DATA_FILE_NAME')]
+        private string $countriesDataFileName,
+        #[Autowire('%kernel.project_dir%')]
+        private string $projectDir,
     ) {
+    }
+
+    public function setCountriesDataFilePath(): self
+    {
+        $this->countriesDataFilePath = implode(DIRECTORY_SEPARATOR, [
+            $this->projectDir,
+            self::DATA_DIR,
+            $this->countriesDataFileName
+        ]);
+
+        return $this;
+    }
+
+    public function setOrigin(string $origin): self
+    {
+        $this->origin = strtoupper($origin);
+        return $this;
+    }
+
+    public function setDestination(string $destination): self
+    {
+        $this->destination = strtoupper($destination);
+        return $this;
     }
 
     /**
      * @return string[]
      * @throws \InvalidArgumentException
      */
-    public function findRoute(): array
+    public function findRoute(string $origin, string $destination): array
     {
+        $this->setOrigin($origin)->setDestination($destination);
+
+        if (!isset($this->countries)) {
+            $this->loadCoutriesData();
+        }
+
         if (!$this->isCountriesAccessible($this->origin, $this->destination)) {
-            throw new \InvalidArgumentException();
+            throw new \InvalidArgumentException('Countries are not accessible', 400);
         }
 
         if ($this->origin === $this->destination) {
@@ -36,9 +76,12 @@ class RoutingService
             return [$this->origin, $this->destination];
         }
 
-        $this->loadCoutriesData();
+        $route = $this->findBreadthFirstPath();
+        if ($route === null) {
+            throw new \InvalidArgumentException('There is no land crossing', 400);
+        }
 
-        return $this->findBreadthFirstPath();
+        return $route;
     }
 
     /**
@@ -80,9 +123,17 @@ class RoutingService
         ;
     }
 
-    public function loadCoutriesData(): void
+    public function loadCoutriesData(): self
     {
-        // implement lead data strategy pattern
-        $this->countries = json_decode(file_get_contents(__DIR__ . '/../data/countries.json'), true);
+        $this->setCountriesDataFilePath();
+
+        $strategy = match (explode('.', $this->countriesDataFileName)[1]) {
+            self::DATA_FILE_TYPE => new JsonFileReaderStrategy($this->countriesDataFilePath),
+            default => throw new \InvalidArgumentException('Invalid data source'),
+        };
+
+        $this->countries = $strategy->readFile();
+
+        return $this;
     }
 }
