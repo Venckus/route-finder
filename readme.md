@@ -18,3 +18,6 @@ For data loading from file strategy pattern is implemented in case there would b
 
 ## Data processing
 The RoutingService class is used for loading data and route search algorythm. Data loading could be flexible - by implementing strategy pattern. For route search Breadth First (BFS) algorythm is choosen.
+
+# How to run
+The project is not dockerized as there was no requirement in the task. The app can be run by using terminal command `php -S 127.0.0.1 -t public/` to acceess `http://127.0.0.1/routing/{origin}/{destination}` endoint.
